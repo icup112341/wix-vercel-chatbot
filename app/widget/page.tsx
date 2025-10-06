@@ -5,7 +5,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 export default function Widget() {
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "Hi! Ask me anything." }
+    { role: "assistant" as const, content: "Hi! Ask me anything." }
   ]);
   const [input, setInput] = useState("");
   const boxRef = useRef<HTMLDivElement>(null);
@@ -19,27 +19,27 @@ export default function Widget() {
     if (!text) return;
     setInput("");
 
-    const next = [...messages, { role: "user", content: text }];
-    setMessages(next);
+    const outgoing: Msg[] = [...messages, { role: "user" as const, content: text }];
+    setMessages(outgoing);
 
     const resp = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages: next.map(m => ({ role: m.role, content: m.content }))
+        messages: outgoing.map(m => ({ role: m.role, content: m.content }))
       })
     });
 
     if (!resp.ok || !resp.body) {
-      setMessages(prev => [...prev, { role: "assistant", content: "Server error." }]);
+      setMessages(prev => [...prev, { role: "assistant" as const, content: "Server error." }]);
       return;
     }
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let assistant = "";
-    setMessages(prev => [...prev, { role: "assistant", content: "" }]);
+    setMessages(prev => [...prev, { role: "assistant" as const, content: "" }]);
 
     while (true) {
       const { done, value } = await reader.read();
@@ -56,11 +56,13 @@ export default function Widget() {
             assistant += delta;
             setMessages(prev => {
               const copy = [...prev];
-              copy[copy.length - 1] = { role: "assistant", content: assistant };
+              copy[copy.length - 1] = { role: "assistant" as const, content: assistant };
               return copy;
             });
           }
-        } catch {}
+        } catch {
+          // ignore keep-alives/partial lines
+        }
       }
     }
   }
