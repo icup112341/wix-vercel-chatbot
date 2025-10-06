@@ -4,28 +4,44 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";        // avoid Edge pitfalls
 export const dynamic = "force-dynamic"; // no caching
 
+// IMPORTANT: no trailing slashes in origins
 const ALLOWED_ORIGINS = [
-  "https://wix-vercel-chatbot.vercel.app/widget",   // your published Wix URL
-  "https://*.wixsite.com",
-  "https://editor.wix.com",
-  "https://*.wixstudio.io",
-  "https://your-custom-domain.com" 
-  "https://wix-vercel-chatbot.vercel.app/"// if you have one
+  "https://wix-vercel-chatbot.vercel.app", // your Vercel app (fallback)
+  "https://editor.wix.com",                // Wix Editor / Preview
+  "https://*.wixsite.com",                 // Wix published sites
+  "https://*.wixstudio.io",                // Wix Studio (if used)
+  // "https://your-custom-domain.com"       // <- uncomment if you have one
 ];
 
+// Robust CORS helper: supports wildcards like https://*.wixsite.com
 function cors(origin: string | null) {
-  const ok =
-    !!origin &&
-    ALLOWED_ORIGINS.some((p) =>
-      p.includes("*") ? origin.endsWith(p.replace("*.", "")) : origin === p
-    );
+  let allow = false;
+
+  if (origin) {
+    try {
+      const u = new URL(origin);
+      const host = u.hostname;
+
+      allow = ALLOWED_ORIGINS.some((p) => {
+        if (p.includes("*")) {
+          // e.g. "https://*.wixsite.com" -> "wixsite.com"
+          const suffix = p.replace(/^https?:\/\/\*\./, "");
+          return host.endsWith(suffix);
+        }
+        // exact origin match
+        return origin === p;
+      });
+    } catch {
+      // invalid Origin header -> disallow
+    }
+  }
 
   const headers: Record<string, string> = {
     Vary: "Origin",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Headers": "content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Origin": ok ? origin! : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Origin": allow ? (origin as string) : ALLOWED_ORIGINS[0],
   };
   return headers;
 }
@@ -68,7 +84,10 @@ export async function POST(req: Request) {
     const text = await r.text();
     if (!r.ok) {
       console.error("OpenAI upstream error:", r.status, text);
-      return NextResponse.json({ error: "upstream", status: r.status, detail: text }, { status: 502, headers });
+      return NextResponse.json(
+        { error: "upstream", status: r.status, detail: text },
+        { status: 502, headers }
+      );
     }
 
     // Pass through JSON
