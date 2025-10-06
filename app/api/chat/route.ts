@@ -5,11 +5,12 @@ export const runtime = "nodejs";        // avoid Edge pitfalls
 export const dynamic = "force-dynamic"; // no caching
 
 const ALLOWED_ORIGINS = [
-  "https://your-site.wixsite.com",   // your published Wix URL
+  "https://wix-vercel-chatbot.vercel.app/widget",   // your published Wix URL
   "https://*.wixsite.com",
   "https://editor.wix.com",
   "https://*.wixstudio.io",
-  "https://your-custom-domain.com"   // if you have one
+  "https://your-custom-domain.com" 
+  "https://wix-vercel-chatbot.vercel.app/"// if you have one
 ];
 
 function cors(origin: string | null) {
