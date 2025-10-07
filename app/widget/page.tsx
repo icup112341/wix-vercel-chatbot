@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 type Msg = { role: "user" | "assistant"; content: string };
 
-export default function Widget() {
+export default function WidgetPage() {
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant" as const, content: "Hi! Ask me anything." }
+    { role: "assistant", content: "Hi! Ask me anything." }
   ]);
   const [input, setInput] = useState("");
   const boxRef = useRef<HTMLDivElement>(null);
@@ -19,88 +19,66 @@ export default function Widget() {
     if (!text) return;
     setInput("");
 
-    const outgoing: Msg[] = [...messages, { role: "user" as const, content: text }];
-    setMessages(outgoing);
+    const next = [...messages, { role: "user", content: text } as const];
+    setMessages(next);
 
-    const resp = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: outgoing.map(m => ({ role: m.role, content: m.content }))
-      })
-    });
+    // If you call from Wix JS (not iframe), use the full URL:
+    // const API_URL = "https://wix-vercel-chatbot.vercel.app/api/chat";
+    const API_URL = "/api/chat";
 
-    if (!resp.ok || !resp.body) {
-      setMessages(prev => [...prev, { role: "assistant" as const, content: "Server error." }]);
-      return;
-    }
+    try {
+      const resp = await fetch(API_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: next })
+      });
 
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder();
-    let assistant = "";
-    setMessages(prev => [...prev, { role: "assistant" as const, content: "" }]);
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      for (const line of chunk.split("\n")) {
-        if (!line.startsWith("data:")) continue;
-        const data = line.slice(5).trim();
-        if (!data || data === "[DONE]") continue;
-        try {
-          const j = JSON.parse(data);
-          const delta = j.choices?.[0]?.delta?.content;
-          if (delta) {
-            assistant += delta;
-            setMessages(prev => {
-              const copy = [...prev];
-              copy[copy.length - 1] = { role: "assistant" as const, content: assistant };
-              return copy;
-            });
-          }
-        } catch {
-          // ignore keep-alives/partial lines
-        }
+      // Surface server/upstream errors (e.g., 429 insufficient_quota)
+      if (!resp.ok) {
+        const detail = await resp.text().catch(() => "");
+        setMessages([
+          ...next,
+          { role: "assistant", content: `Error ${resp.status}: ${detail || "request failed"}` }
+        ]);
+        return;
       }
+
+      const data = await resp.json();
+      const content =
+        data?.choices?.[0]?.message?.content ??
+        data?.message?.content ??
+        "(no content)";
+
+      setMessages([...next, { role: "assistant", content }]);
+    } catch (e: any) {
+      setMessages([
+        ...next,
+        { role: "assistant", content: `Network error: ${String(e?.message || e)}` }
+      ]);
     }
   }
 
   return (
-    <div style={{
-      height:"100vh", display:"grid", gridTemplateRows:"1fr auto",
-      background:"#0b0f19", color:"#e5e7eb", fontFamily:"Inter,system-ui,sans-serif"
-    }}>
-      <div ref={boxRef} style={{ overflowY:"auto", padding:16 }}>
+    <main style={{ maxWidth: 720, margin: "40px auto", padding: 16, color: "white", fontFamily: "Inter, system-ui, sans-serif" }}>
+      <div ref={boxRef} style={{ height: 420, overflowY: "auto", padding: 12, borderRadius: 12, background: "#111827" }}>
         {messages.map((m, i) => (
-          <div key={i} style={{
-            background: m.role === "user" ? "#1a2333" : "#0f172a",
-            border:"1px solid #263044", borderRadius:12, padding:"12px 14px",
-            marginBottom:8, whiteSpace:"pre-wrap"
-          }}>
-            <div style={{ opacity:.6, fontWeight:600 }}>{m.role === "user" ? "You" : "Wabot"}</div>
-            {m.content}
+          <div key={i} style={{ margin: "12px 0" }}>
+            <div style={{ opacity: 0.7, fontWeight: 600 }}>{m.role === "user" ? "You" : "Wabot"}</div>
+            <div style={{ whiteSpace: "pre-wrap" }}>{m.content}</div>
           </div>
         ))}
       </div>
-      <div style={{ display:"flex", gap:8, padding:12, borderTop:"1px solid #263044" }}>
+      <form onSubmit={(e) => { e.preventDefault(); send(); }} style={{ marginTop: 12, display: "flex", gap: 8 }}>
         <input
           value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => (e.key === "Enter" ? send() : undefined)}
+          onChange={(e) => setInput(e.target.value)}
           placeholder="Type your question…"
-          style={{
-            flex:1, padding:"12px 14px", borderRadius:12,
-            border:"1px solid #263044", background:"#0f172a",
-            color:"#e5e7eb", outline:"none"
-          }}
+          style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #374151", background: "#0b1220", color: "white" }}
         />
-        <button onClick={send} style={{
-          padding:"12px 16px", borderRadius:12, border:"1px solid #263044",
-          background:"#1a2333", color:"#e5e7eb", cursor:"pointer"
-        }}>Send</button>
-      </div>
-    </div>
+        <button type="submit" style={{ padding: "10px 14px", borderRadius: 8, background: "#2563eb", color: "white", border: 0 }}>
+          Send
+        </button>
+      </form>
+    </main>
   );
 }
