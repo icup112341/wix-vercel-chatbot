@@ -7,9 +7,10 @@ export default function Home() {
       fontFamily: "system-ui, sans-serif"
     }}>
       <div style={{ textAlign: "center" }}>
-        <h1>Wix Chatbot</h1>
+        <h1>AI Safety Training Chatbot</h1>
+        <p>Interactive training for safe AI usage in business environments</p>
         <p>Open <code>/widget</code> for the embeddable chat.</p>
-        <p><a href="/widget">Go to /widget →</a></p>
+        <p><a href="/widget">Start AI Safety Training →</a></p>
       </div>
     </main>
   );

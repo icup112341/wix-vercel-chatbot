@@ -5,7 +5,7 @@ type Msg = { role: "user" | "assistant"; content: string };
 
 export default function WidgetPage() {
   const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: "Hi! Ask me anything." }
+    { role: "assistant", content: "Welcome to AI Safety Training! I'm here to help you learn how to use AI tools safely in your workplace. I can help with data privacy, tool selection, compliance, and best practices. What would you like to learn about today?" }
   ]);
   const [input, setInput] = useState("");
   const boxRef = useRef<HTMLDivElement>(null);
@@ -63,7 +63,7 @@ export default function WidgetPage() {
       <div ref={boxRef} style={{ height: 420, overflowY: "auto", padding: 12, borderRadius: 12, background: "#111827" }}>
         {messages.map((m, i) => (
           <div key={i} style={{ margin: "12px 0" }}>
-            <div style={{ opacity: 0.7, fontWeight: 600 }}>{m.role === "user" ? "You" : "Wabot"}</div>
+            <div style={{ opacity: 0.7, fontWeight: 600 }}>{m.role === "user" ? "You" : "AI Safety Trainer"}</div>
             <div style={{ whiteSpace: "pre-wrap" }}>{m.content}</div>
           </div>
         ))}
@@ -72,7 +72,7 @@ export default function WidgetPage() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your question…"
+          placeholder="Ask about AI safety, data privacy, or best practices..."
           style={{ flex: 1, padding: "10px 12px", borderRadius: 8, border: "1px solid #374151", background: "#0b1220", color: "white" }}
         />
         <button type="submit" style={{ padding: "10px 14px", borderRadius: 8, background: "#2563eb", color: "white", border: 0 }}>
