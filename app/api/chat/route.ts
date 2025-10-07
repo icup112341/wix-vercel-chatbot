@@ -82,13 +82,14 @@ export async function POST(req: Request) {
     });
 
     const text = await r.text();
-    if (!r.ok) {
-      console.error("OpenAI upstream error:", r.status, text);
-      return NextResponse.json(
-        { error: "upstream", status: r.status, detail: text },
-        { status: 502, headers }
-      );
-    }
+  if (!r.ok) {
+  console.error("OpenAI upstream error:", r.status, text);
+  return NextResponse.json(
+    { error: "upstream", status: r.status, detail: text },
+    { status: r.status, headers }
+  );
+}
+
 
     // Pass through JSON
     return new Response(text, {
