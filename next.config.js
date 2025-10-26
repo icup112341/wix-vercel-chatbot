@@ -1,3 +1,24 @@
+const DEFAULT_FRAME_ANCESTORS = [
+  "'self'",
+  "https://editor.wix.com",
+  "https://www.wix.com",
+  "https://*.wixsite.com",
+  "https://*.editorx.io"
+];
+
+function getFrameAncestors() {
+  const extra = process.env.ALLOWED_FRAME_ANCESTORS?.split(/[,\s]+/)
+    .map(origin => origin.trim())
+    .filter(Boolean);
+
+  const merged = new Set(DEFAULT_FRAME_ANCESTORS);
+  if (extra) {
+    for (const origin of extra) merged.add(origin);
+  }
+
+  return Array.from(merged).join(" ");
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
@@ -5,11 +26,13 @@ const nextConfig = {
       {
         source: "/(.*)",
         headers: [
-          // Allow Wix editor + wixsite previews to embed your app
           {
             key: "Content-Security-Policy",
-            value:
-              "frame-ancestors https://editor.wix.com https://*.wixsite.com 'self';",
+            value: `frame-ancestors ${getFrameAncestors()};`
+          },
+          {
+            key: "X-Frame-Options",
+            value: "ALLOWALL"
           }
         ]
       }
